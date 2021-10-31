@@ -26,7 +26,6 @@ router.get("/", (req, res) => {
     }
 
     if (Array.isArray(results)) {
-      console.log(results);
       res.send(uniqueHeroes(results));
     } else {
       res.send([]);

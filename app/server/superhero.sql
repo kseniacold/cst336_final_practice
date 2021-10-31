@@ -2,9 +2,9 @@
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 SET time_zone = "+00:00";
 
+DROP TABLE IF EXISTS `record`;
 DROP TABLE IF EXISTS `superhero`;
 DROP TABLE IF EXISTS `villain`;
-DROP TABLE IF EXISTS `record`;
 
 CREATE TABLE IF NOT EXISTS `superhero` (
   `id` int(11) NOT NULL,
@@ -69,8 +69,11 @@ SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 SET time_zone = "+00:00";
 CREATE TABLE IF NOT EXISTS `record` (
   `recordId` int(11) NOT NULL AUTO_INCREMENT,
+  `superheroId` int(11) NOT NULL,
   `value` tinyint(1) NOT NULL,
-  PRIMARY KEY (`recordId`)
+  PRIMARY KEY (`recordId`),
+  FOREIGN KEY (`superheroId`)
+    REFERENCES superhero(id) 
 ) ENGINE=InnoDB  DEFAULT CHARSET=latin1;
 
 

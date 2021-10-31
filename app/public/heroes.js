@@ -35,6 +35,9 @@ const createElementFromHTMLStr = (html) => {
  *
  * RENDERING
  */
+const makeBgColorClass = (valid) => (!valid ? "bg-cl--red" : "bg-cl--green");
+const makeColorClass = (valid) => (!valid ? "txt-cl--red" : "txt-cl--green");
+
 const Hero = (image) => {
   return createElementFromHTMLStr(
     `<article class="hero-card__card">
@@ -51,8 +54,8 @@ const optionStr = ({ value, label }) =>
   `<option value="${value}">${label}</option>`;
 
 const Options = (heroes) => {
-  const $options = heroes.map(({ name, fullName }) =>
-    createElementFromHTMLStr(`${optionStr({ value: name, label: fullName })}`)
+  const $options = heroes.map(({ id, fullName }) =>
+    createElementFromHTMLStr(`${optionStr({ value: id, label: fullName })}`)
   );
 
   $options.unshift(
@@ -63,7 +66,28 @@ const Options = (heroes) => {
 
 const Message = (text, isError) =>
   createElementFromHTMLStr(
-    `<p class="${isError ? "bg-cl--red" : "bg-cl--green"}">${text}</p>`
+    `<p class="${makeBgColorClass(isError)}">${text}</p>`
+  );
+
+const Result = (isValid, numCorrect, numWrong) =>
+  createElementFromHTMLStr(
+    `<div class="quiz-result">
+    <p class="quiz-result__text txt--bold ${makeColorClass(isValid)}" >${
+      isValid ? "Your Answer is Correct!" : "Sorry, you missed it. Try again!"
+    }</p>
+    <div class="quiz-result__stats">
+     <p class="quiz_result__stat">
+      This question was answered correctly <b class="${makeColorClass(
+        true
+      )}">${numCorrect}</b> times.
+     </p> 
+     <p class="quiz-result__stat">
+      This question was answered wrong <b class="${makeColorClass(
+        false
+      )}">${numWrong}</b> times.
+     </p> 
+    </div>
+  </div>`
   );
 
 /***
@@ -73,12 +97,29 @@ const Message = (text, isError) =>
 class DataStore {
   constructor() {
     this.data = new Map();
+    this.data.set("records", new Map());
     this.callbacks = [];
   }
 
   set(key, data) {
     this.data.set(key, data);
     this.notify(key, data);
+  }
+
+  addRecord(superheroId, isValid, numCorrect, numWrong) {
+    const recordsMap = this.data.get("records");
+    recordsMap.set(superheroId, {
+      isValid,
+      numCorrect,
+      numWrong,
+    });
+
+    this.notify("records", {
+      superheroId,
+      isValid,
+      numCorrect,
+      numWrong,
+    });
   }
 
   get(key) {
@@ -111,18 +152,26 @@ const sortHeroes = (heroes) =>
 
 const mapHeroes = (heroes) => pipe(mapFullNames, sortHeroes)(heroes);
 
-const getAnswersMap = (heroes) => {
-  const answers = new Map();
-
-  for (const hero of heroes) {
-    answers.set(hero.name, hero.id);
-  }
-  return answers;
-};
-
 const fetchHeroes = async () => {
   return await (await fetch("/api/heroes")).json();
 };
+
+const sendResults = async (isValid, superheroId) =>
+  await fetch("/api/records", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      value: isValid ? 1 : 0,
+      superheroId,
+    }),
+  });
+
+const retrieveStats = async (value, superheroId) =>
+  await (
+    await fetch(`/api/records?value=${value}&superheroId=${superheroId}`)
+  ).json();
 
 /**
  *
@@ -135,24 +184,17 @@ const handleFormSubmit = ($select, $form, dataStore) => async (event) => {
   } else {
     dataStore.set("loading", { prop: "results", isLoading: true });
     const formData = new FormData($form);
-    const heroName = formData.get("heroSelect");
-    console.log("data store", dataStore);
-    console.log("heroName", heroName);
-    console.log(dataStore.get("answers").get(heroName));
-    const isValid =
-      dataStore.get("answers").get(heroName) === dataStore.get("image");
+    const answeredId = parseInt(formData.get("heroSelect"));
+    const superheroId = dataStore.get("image");
+    const isValid = answeredId === superheroId;
 
-    await fetch("/api/records", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        value: isValid ? 1 : 0,
-      }),
-    });
-
+    await sendResults(isValid, superheroId);
+    const numCorrect = await retrieveStats(1, superheroId);
+    const numWrong = await retrieveStats(0, superheroId);
+    // TODO handle errors
     dataStore.set("loading", { prop: "results", isLoading: false });
+
+    dataStore.addRecord(superheroId, isValid, numCorrect, numWrong);
   }
 };
 
@@ -180,7 +222,7 @@ const updateLoading = ($results, $heroCard, data) => {
 
 const updateHeroes = ($select, $heroCard, data, dataStore) => {
   if (Array.isArray(data)) {
-    const answers = $heroCard.replaceChildren("");
+    $heroCard.replaceChildren("");
     // place options into select
     $select.replaceChildren(...Options(data));
     // place hero
@@ -192,7 +234,13 @@ const updateHeroes = ($select, $heroCard, data, dataStore) => {
   }
 };
 
-const updateResults = ($results, data) => {};
+const updateResults = ($results, data) => {
+  const { isValid, numCorrect, numWrong } = data;
+  $results.replaceChildren("");
+  if (data) {
+    $results.appendChild(Result(isValid, numCorrect, numWrong));
+  }
+};
 
 const onDataChange =
   ($select, $results, $heroCard, dataStore) => (key, data) => {
@@ -205,8 +253,9 @@ const onDataChange =
         break;
       case "loading":
         updateLoading($results, $heroCard, data);
-      case "results":
-        updateResults($results);
+        break;
+      case "records":
+        updateResults($results, data);
         break;
       default:
         break;
@@ -233,7 +282,6 @@ const app = async () => {
   if (!Array.isArray(heroesRaw)) return;
   const heroes = mapHeroes(heroesRaw);
   dataStore.set("heroes", heroes);
-  dataStore.set("answers", getAnswersMap(heroes));
 };
 
 (function () {

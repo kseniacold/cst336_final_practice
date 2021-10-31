@@ -1,11 +1,15 @@
-.hidden {
-  display: none;
-}
-
 .bg-cl--red {
   background-color: #ffc0c0;
 }
 
-.bg-cl--green {
-  background-color: #99e999;
+.txt-cl--green {
+  color: #99e999;
+}
+
+.txt-cl--red {
+  color: #ffc0c0;
+}
+
+.txt--bold {
+  font-weight: bold;
 }

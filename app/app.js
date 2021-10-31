@@ -1,11 +1,13 @@
+require("dotenv").config();
 const express = require("express");
+const path = require("path");
+const Server = require("./server/Server");
+
 const app = express();
-const port = process.env.PORT;
+app.use(express.json());
 
-app.get("/", (req, res) => {
-  res.send("Hello World!");
-});
+const staticPath = path.join(__dirname, "/public");
 
-app.listen(port, () => {
-  console.log(`Example app listening at http://localhost:${port}`);
-});
+const port = parseInt(process.env.PORT) || 80;
+const server = new Server(app, staticPath);
+server.start(port);

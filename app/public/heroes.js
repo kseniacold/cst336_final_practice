@@ -152,6 +152,9 @@ const sortHeroes = (heroes) =>
 
 const mapHeroes = (heroes) => pipe(mapFullNames, sortHeroes)(heroes);
 
+/**
+ * API REQUESTS
+ */
 const fetchHeroes = async () => {
   return await (await fetch("/api/heroes")).json();
 };

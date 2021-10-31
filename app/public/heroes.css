@@ -13,3 +13,8 @@
 .txt--bold {
   font-weight: bold;
 }
+
+.loader-img {
+  height: 30px;
+  width: 30px;
+}

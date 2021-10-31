@@ -47,7 +47,7 @@ const Hero = (image) => {
 };
 
 const loader = createElementFromHTMLStr(
-  "<img src='images/img/loading.gif' alt='Page is Loading' />"
+  "<img class='loader-img' src='images/img/loading.gif' alt='Page is Loading' />"
 );
 
 const optionStr = ({ value, label }) =>
@@ -216,6 +216,7 @@ const updateLoading = ($results, $heroCard, data) => {
       $results.appendChild(loader);
     }
   } else if (prop === "heroes") {
+    debugger;
     $heroCard.replaceChildren("");
     if (isLoading) {
       $heroCard.appendChild(loader);
